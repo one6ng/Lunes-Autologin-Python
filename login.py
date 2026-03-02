@@ -72,6 +72,7 @@ async def login_account(playwright, username, password):
     await page.goto(LOGIN_URL, timeout=60000)
     await page.wait_for_timeout(8000)
 
+    # 检测 Cloudflare
     if await detect_cloudflare(page):
         await page.screenshot(path=screenshot_path)
         await browser.close()
@@ -79,6 +80,7 @@ async def login_account(playwright, username, password):
 
     content = await page.content()
 
+    # 如果未进入 Dashboard，则执行登录
     if "Dashboard" not in content:
         await page.fill('input[type="text"]', username)
         await page.fill('input[type="password"]', password)
@@ -93,6 +95,7 @@ async def login_account(playwright, username, password):
         await browser.close()
         return False, "Login Failed", screenshot_path
 
+    # 校验服务器信息
     if not await verify_server(page):
         await page.screenshot(path=screenshot_path)
         await browser.close()
