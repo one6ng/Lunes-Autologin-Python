@@ -1,130 +1,132 @@
 import os
 import asyncio
-import time
 from datetime import datetime
 import requests
 from playwright.async_api import async_playwright
 
 LOGIN_URL = "https://ctrl.lunes.host/"
-COOKIE_FILE = "cookies/state.json"
 
 ACCOUNTS = os.getenv("ACCOUNTS")
+SERVER_ID = os.getenv("SERVER_ID")
+SERVER_UUID = os.getenv("SERVER_UUID")
+NODE_HOST = os.getenv("NODE_HOST")
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 ONLY_ERROR_NOTIFY = os.getenv("ONLY_ERROR_NOTIFY", "true").lower() == "true"
 
 os.makedirs("cookies", exist_ok=True)
+os.makedirs("screenshots", exist_ok=True)
 
 
-def send_tg(text):
+def send_tg(text, photo_path=None):
     if not BOT_TOKEN or not CHAT_ID:
         return
 
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        json={"chat_id": CHAT_ID, "text": text}
-    )
+    if photo_path:
+        with open(photo_path, "rb") as f:
+            requests.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto",
+                data={"chat_id": CHAT_ID, "caption": text},
+                files={"photo": f}
+            )
+    else:
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={"chat_id": CHAT_ID, "text": text}
+        )
 
 
 async def detect_cloudflare(page):
     content = await page.content()
-    if "Just a moment" in content or "cf-browser-verification" in content:
-        return True
-    return False
+    return "Just a moment" in content or "cf-browser-verification" in content
 
 
-async def login_and_save_cookie(page, username, password):
-    await page.fill('input[type="text"]', username)
-    await page.fill('input[type="password"]', password)
-    await page.click('button[type="submit"]')
-    await page.wait_for_load_state("networkidle")
-    await page.wait_for_timeout(5000)
-
+async def verify_server(page):
     content = await page.content()
-    if "Dashboard" in content or "Logout" in content:
-        await page.context.storage_state(path=COOKIE_FILE)
+
+    checks = []
+    if SERVER_ID:
+        checks.append(SERVER_ID in content)
+    if SERVER_UUID:
+        checks.append(SERVER_UUID in content)
+    if NODE_HOST:
+        checks.append(NODE_HOST in content)
+
+    if not checks:
         return True
-    return False
+
+    return all(checks)
 
 
-async def try_cookie_login(playwright):
-    if not os.path.exists(COOKIE_FILE):
-        return False
+async def login_account(playwright, username, password):
+    cookie_file = f"cookies/{username}.json"
+    screenshot_path = f"screenshots/{username}.png"
 
     browser = await playwright.chromium.launch(headless=True)
-    context = await browser.new_context(storage_state=COOKIE_FILE)
+    context = await browser.new_context(
+        storage_state=cookie_file if os.path.exists(cookie_file) else None
+    )
     page = await context.new_page()
 
     await page.goto(LOGIN_URL, timeout=60000)
-    await page.wait_for_timeout(5000)
+    await page.wait_for_timeout(8000)
 
     if await detect_cloudflare(page):
-        print("⚠️ Cloudflare challenge detected")
+        await page.screenshot(path=screenshot_path)
         await browser.close()
-        return False
+        return False, "Cloudflare Challenge", screenshot_path
 
     content = await page.content()
-    if "Dashboard" in content:
+
+    if "Dashboard" not in content:
+        await page.fill('input[type="text"]', username)
+        await page.fill('input[type="password"]', password)
+        await page.click('button[type="submit"]')
+        await page.wait_for_load_state("networkidle")
+        await page.wait_for_timeout(8000)
+
+    content = await page.content()
+
+    if "Dashboard" not in content:
+        await page.screenshot(path=screenshot_path)
         await browser.close()
-        return True
+        return False, "Login Failed", screenshot_path
 
-    await browser.close()
-    return False
-
-
-async def full_login(playwright, username, password):
-    browser = await playwright.chromium.launch(headless=True)
-    context = await browser.new_context()
-    page = await context.new_page()
-
-    await page.goto(LOGIN_URL, timeout=60000)
-    await page.wait_for_timeout(5000)
-
-    if await detect_cloudflare(page):
-        print("⚠️ Cloudflare challenge blocks login")
+    if not await verify_server(page):
+        await page.screenshot(path=screenshot_path)
         await browser.close()
-        return False
+        return False, "Server Info Not Matched", screenshot_path
 
-    success = await login_and_save_cookie(page, username, password)
+    await context.storage_state(path=cookie_file)
     await browser.close()
-    return success
+    return True, "Success", None
 
 
 async def main():
     if not ACCOUNTS:
-        print("No ACCOUNTS configured")
+        print("No ACCOUNTS provided")
         return
 
-    username, password = ACCOUNTS.split(":")[0].split(":")
+    accounts = ACCOUNTS.split(",")
 
     async with async_playwright() as playwright:
+        for acc in accounts:
+            username, password = acc.split(":")
+            print(f"🔄 Checking {username}")
 
-        print("🔄 尝试使用 Cookie 登录...")
-        cookie_ok = await try_cookie_login(playwright)
+            ok, msg, screenshot = await login_account(playwright, username, password)
 
-        if cookie_ok:
-            print("✅ Cookie 登录成功")
-
-            if not ONLY_ERROR_NOTIFY:
-                send_tg(f"✅ Lunes 保活成功（Cookie模式）\n时间: {datetime.now()}")
-            return
-
-        print("🔐 Cookie失效，尝试完整登录...")
-        login_ok = await full_login(playwright, username, password)
-
-        if login_ok:
-            print("✅ 完整登录成功并已保存 Cookie")
-
-            if not ONLY_ERROR_NOTIFY:
-                send_tg(f"✅ Lunes 完整登录成功\n时间: {datetime.now()}")
-        else:
-            print("❌ 登录失败（可能被 Cloudflare 阻挡）")
-
-            send_tg(
-                f"❌ Lunes 登录失败\n"
-                f"时间: {datetime.now()}\n"
-                f"原因: Cloudflare Challenge 或账号异常"
-            )
+            if ok:
+                print(f"✅ {username} success")
+                if not ONLY_ERROR_NOTIFY:
+                    send_tg(f"✅ {username} 保活成功\n时间: {datetime.now()}")
+            else:
+                print(f"❌ {username} failed: {msg}")
+                send_tg(
+                    f"❌ {username} 保活失败\n原因: {msg}\n时间: {datetime.now()}",
+                    screenshot
+                )
 
 
 asyncio.run(main())
