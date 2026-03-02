@@ -1,8 +1,8 @@
-name: Lunes Auto Login (Python)
+name: Lunes Stable KeepAlive
 
 on:
   schedule:
-    - cron: "0 1 */14 * *"
+    - cron: "0 1 */10 * *"
   workflow_dispatch:
 
 jobs:
@@ -10,25 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
-      - name: Run login script
-        run: python login.py
+      - run: playwright install chromium
+
+      - run: python login.py
         env:
-          LUNES_USERNAME: ${{ secrets.LUNES_USERNAME }}
-          LUNES_PASSWORD: ${{ secrets.LUNES_PASSWORD }}
-          SERVER_ID: ${{ secrets.SERVER_ID }}
-          SERVER_UUID: ${{ secrets.SERVER_UUID }}
-          NODE_HOST: ${{ secrets.NODE_HOST }}
+          ACCOUNTS: ${{ secrets.ACCOUNTS }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+          ONLY_ERROR_NOTIFY: ${{ secrets.ONLY_ERROR_NOTIFY }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cookies
+          path: cookies/
