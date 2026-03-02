@@ -1,34 +1,56 @@
-name: Lunes Stable KeepAlive
+name: Lunes Stable Login KeepAlive
 
 on:
   schedule:
-    - cron: "0 1 */10 * *"
+    - cron: "0 2 */10 * *"
   workflow_dispatch:
 
 jobs:
-  login:
+  keepalive:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - run: pip install -r requirements.txt
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
 
-      - run: playwright install chromium
+      - name: Restore Cookies
+        uses: actions/download-artifact@v4
+        with:
+          name: cookies
+          path: cookies
+        continue-on-error: true
 
-      - run: python login.py
+      - name: Run Login Script
+        run: python login.py
         env:
           ACCOUNTS: ${{ secrets.ACCOUNTS }}
+          SERVER_ID: ${{ secrets.SERVER_ID }}
+          SERVER_UUID: ${{ secrets.SERVER_UUID }}
+          NODE_HOST: ${{ secrets.NODE_HOST }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           ONLY_ERROR_NOTIFY: ${{ secrets.ONLY_ERROR_NOTIFY }}
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Cookies
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cookies
           path: cookies/
+
+      - name: Upload Screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: screenshots/
