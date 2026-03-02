@@ -18,7 +18,7 @@ Pterodactyl面板地址：https://ctrl.lunes.host/
 
 | 参数 | 说明 | 必填 | 默认值 |
 |------|------|------|--------|
-| `PANEL_URL` | Pterodactyl面板地址 | ✅ | 点击manage后进入控制台的域名：https://ctrl.lunes.host/ |
+| `PANEL_URL` | Pterodactyl面板地址 | ❌ | 点击manage后进入控制台的域名：https://ctrl.lunes.host/ |
 | `SERVER_ID` | 服务器ID | ✅ | 控制台页面url的path里面可以取到：https://ctrl.lunes.host/server/server_id |
 | `SERVER_UUID` | 服务器UUID | ✅ | 进入控制台页面点击setting然后看左下角长的那个就是uuid |
 | `NODE_HOST` | 节点主机名 | ✅ | 点击network里面的hostname就是 |
