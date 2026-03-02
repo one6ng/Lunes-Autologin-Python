@@ -5,7 +5,7 @@ Pterodactyl面板地址：https://ctrl.lunes.host/
 
 ### 功能特点
 - 🔐 自动登录 Lnues 账户(单账户或多账户)
-- 👥 支持账户自动处理
+- 👥 支持多账户自动登录
 - ⏰ 每10天自动执行一次
 - 📱 执行结果可通过 Telegram 通知
 
@@ -22,10 +22,10 @@ Pterodactyl面板地址：https://ctrl.lunes.host/
 | `SERVER_ID` | 服务器ID | ✅ | 控制台页面url的path里面可以取到：https://ctrl.lunes.host/server/server_id |
 | `SERVER_UUID` | 服务器UUID | ✅ | 进入控制台页面点击setting然后看左下角长的那个就是uuid |
 | `NODE_HOST` | 节点主机名 | ✅ | 点击network里面的hostname就是 |
-| `LUNES_USERNAME` | 登录用户名 | ✅ | - |
-| `LUNES_PASSWORD` | 登录密码 | ✅ | - |
+| `ACCOUNTS` | 支持多用户登录 | ✅ | -格式：user1:pass1,user2:pass2 |
 | `BOT_TOKEN` | 机器人TOKEN | ✅ | TG机器密钥 |
 | `CHAT_ID` | 通知群组ID | ✅ | TG群组ID |
+| `ONLY_ERROR_NOTIFY` | - | ✅ | 值为true |
 	    
 4. GitHub Actions 初始手动执行检查是否有配置错误，脚本会自动每10天执行一次,可手动执行
 
