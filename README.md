@@ -14,6 +14,7 @@ Pterodactyl面板地址：https://ctrl.lunes.host/
 2. 在Actions菜单允许 `I understand my workflows, go ahead and enable them` 按钮
 
 3. ### 配置参数说明
+转到 ​Settings > Secrets and variables > Actions​，添加以下 Secrets：
 
 | 参数 | 说明 | 必填 | 默认值 |
 |------|------|------|--------|
