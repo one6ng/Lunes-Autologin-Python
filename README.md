@@ -23,7 +23,7 @@ Pterodactyl面板地址：https://ctrl.lunes.host/
 | `SERVER_UUID` | 服务器UUID | ✅ | 进入控制台页面点击setting然后看左下角长的那个就是uuid |
 | `NODE_HOST` | 节点主机名 | ✅ | 点击network里面的hostname就是 |
 | `ACCOUNTS` | 支持多用户登录 | ✅ | 格式：user1:pass1,user2:pass2 |
-| `ONLY_ERROR_NOTIFY` | - | ✅ | 值为true |
+| `ONLY_ERROR_NOTIFY` | 错误通知 | ✅ | 值为true |
 | `BOT_TOKEN` | 机器人TOKEN | ✅ | TG机器密钥 |
 | `CHAT_ID` | 通知群组ID | ✅ | TG群组ID |
 
